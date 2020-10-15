@@ -15,7 +15,9 @@ public class GrassMeshGen : MonoBehaviour
 
     private Mesh mesh;
     private int[] triangles;
+    // original vertices
     private Vector3[] fixedVertices;
+    // runtime vertices
     private Vector3[] vertices;
     private Vector2[] uvs;
 
@@ -56,6 +58,7 @@ public class GrassMeshGen : MonoBehaviour
         }
     }
 
+    // vertex movement with compute shader
     void Update()
     {
         float now = Time.time;
@@ -82,6 +85,15 @@ public class GrassMeshGen : MonoBehaviour
         if (buffer != null)
             buffer.Dispose();
     }
+
+    void UpdateMesh()
+    {
+        mesh.Clear();
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.uv = uvs;
+        mesh.RecalculateNormals();
+    }
     #endregion
 
     // Generate grass mesh
@@ -100,11 +112,8 @@ public class GrassMeshGen : MonoBehaviour
 
         for (int n = 0; n < nGrass; ++n)
         {
-            Random.InitState(n % 10);
-
-            float height = Random.Range(.5f, maxHeight);
-
-            // 0,1; 2,3; 4,5; ...
+            float height = Random.Range(maxHeight * .5f, maxHeight);
+            // vertex
             int grassIdx = nVertex * n;
             for (int i = 0; i <= nVertical; ++i)
             {
@@ -115,7 +124,7 @@ public class GrassMeshGen : MonoBehaviour
                 if (i != nVertical)
                     vertices[grassIdx + i * 2 + 1] = new Vector3(width, height * i, 0);
             }
-
+            // triangle
             int trisIdx = nTris * 3 * n;
             for (int i = 0; i < nTris; i++)
             {
@@ -123,44 +132,61 @@ public class GrassMeshGen : MonoBehaviour
                 triangles[trisIdx + i * 3 + 1] = grassIdx + i + 1;
                 triangles[trisIdx + i * 3 + 2] = grassIdx + i + 2;
             }
-
+            // uv
             for (int i = 0; i < uvs.Length; ++i)
             {
                 Vector3 vert = vertices[i];
                 uvs[i] = new Vector2(vert.x, vert.y);
             }
+            VertexRotateMove();
+        }
+        Recenter();
 
-            // rotate and move vertices
-            Quaternion rotation = Quaternion.Euler(0, 30, 0);
-            Matrix4x4 m = Matrix4x4.Rotate(rotation);
+        SetFixedVertices();
+    }
 
-            Vector3 offset = new Vector3(RandomRadius(grassRadius), 0, RandomRadius(grassRadius));
-            for (int i = 0; i < vertices.Length; ++i)
-            {
-                vertices[i] = m.MultiplyPoint3x4(vertices[i]) + offset;
-            }
+    void VertexRotateMove()
+    {
+        // uniformly sample in a circle is a math problem!
+        // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
 
-            // store original vertices
-            fixedVertices = new Vector3[vertices.Length];
-            for (int i = 0; i < vertices.Length; ++i)
-            {
-                fixedVertices[i] = vertices[i];
-            }
+        float t = 2 * Mathf.PI * grassRadius;
+        float u = Random.value + Random.value;
+        float r = u > 1 ? 2 - u : u;
+        Vector3 offset = new Vector3(r * Mathf.Cos(t), 0, r * Mathf.Sin(t));
+
+        // rotate and move vertices
+        Quaternion rotation = Quaternion.Euler(0, 30, 0);
+        Matrix4x4 m = Matrix4x4.Rotate(rotation);
+
+        for (int i = 0; i < vertices.Length; ++i)
+        {
+            vertices[i] = m.MultiplyPoint3x4(vertices[i]) + offset;
         }
     }
 
-    void UpdateMesh()
+    void Recenter()
     {
-        mesh.Clear();
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.uv = uvs;
-        mesh.RecalculateNormals();
+        Vector3 center = Vector3.zero;
+        foreach (Vector3 vertex in vertices)
+        {
+            center += vertex;
+        }
+        center /= vertices.Length;
+        center.y = 0;
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            vertices[i] -= center;
+        }
     }
 
-    float RandomRadius(float radius)
+    void SetFixedVertices()
     {
-        return Random.Range(0, 2 * radius) - radius;
+        fixedVertices = new Vector3[vertices.Length];
+
+        for (int i = 0; i < vertices.Length; ++i)
+            fixedVertices[i] = vertices[i];
     }
 
     //private void OnDrawGizmos()
