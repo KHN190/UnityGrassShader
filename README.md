@@ -1,4 +1,4 @@
-# Grass Geometry Shader for Unity
+# Grass Compute Shader for Unity
 
 Grass shader using mesh generation and computer shader for wind swing.
 
@@ -8,4 +8,8 @@ Reference project:
 
 Different approach used because Geometry Shader and Shader Graph are not working correctly on MacOS.
 
-![grass swing](./img/grassSwing.gif)
+<img src="./img/grassSwing.gif" width="600" align="right" />
+
+### Related
+
+* [HexMap](https://github.com/KHN190/miniHexMap) editor used the same grass generation.
