@@ -1,6 +1,6 @@
 # Grass Compute Shader for Unity
 
-Grass shader using mesh generation and computer shader for wind swing.
+Grass shader using mesh generation and compute shader for wind swing.
 
 Reference project:
 * [Unity Grass Shader](http://roystan.net/articles/grass-shader.html).
